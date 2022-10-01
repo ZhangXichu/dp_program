@@ -611,6 +611,7 @@ df_geo
 
 # reference: https://cran.r-project.org/web/packages/RCzechia/vignettes/vignette.html
 
+
 # ggplot does not play nice with {raster} package; a data frame is required
 relief <- vyskopis("rayshaded") %>%
   as("SpatialPixelsDataFrame") %>% # old style format - {sp}
@@ -626,4 +627,124 @@ ggplot() +
   geom_sf(data = df_geo,  color = "black", pch = 4) +  # X marks the spot!
   theme_bw() +
   theme(axis.title = element_blank())
+
+
+res_vyskopis <-  vyskopis("rayshaded")
+sp.df <- vyskopis("rayshaded") %>% as("SpatialPixelsDataFrame")
+# plot(sp.df)
+
+coords.cz <- coordinates(sp.df)
+coords.cz <- as.data.frame(coords.cz)
+
+
+# read the data
+df_T <- readRDS("DATA/CHMU_Output/df_T_Hodnota_V1.32.rds")
+nrow(df_T)
+df_T[, ncol(df_T)]
+df_TMA <- readRDS("DATA/CHMU_Output/df_TMA_Hodnota_V1.32.rds")
+nrow(df_TMA)
+df_TMI <- readRDS("DATA/CHMU_Output/df_TMI_Hodnota_V1.32.rds")
+nrow(df_TMI)
+df_SRA <- readRDS("DATA/CHMU_Output/df_SRA_Hodnota_V1.32.rds")
+nrow(df_SRA)
+
+
+# helpful: example-spatio-temporal data.Rmd
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 50), ]
+
+# reindex
+rownames(coords.cz.re) <- NULL
+
+gam_prediction <- function(datetime_cz) {
+  # prepare the points for interpolation
+  # select a subset to low down the resolution
+  coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 10), ]
+  # reindex
+  rownames(coords.cz.re) <- NULL
+  
+  
+  # preprocessing
+  df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
+  
+  # get the subset for a concrete season
+  df_T_sub<- df_T[, grep(datetime_cz, names(df_T))]
+  
+  years_indices <- colnames(df_T)
+  # columns of information about the stations
+  df_T_info <- df_T[, seq(1:5)]
+  
+  colnames(df_T_info) <- df_info_indices
+  
+  df_T_sub <- cbind(df_T_info, df_T_sub)
+  stations_T <- na.omit(df_T_sub)[, 1:4]
+  
+  df_T_sub_long <- melt(setDT(df_T_sub), id.vars = df_info_indices, variable.name = "year")
+  
+  # remove the na values
+  df_T_sub_long <- na.omit(df_T_sub_long)
+  
+  
+  df_T_sub_long$year <- as.character(df_T_sub_long$year)
+  df_T_sub_long$year <- as.POSIXct(df_T_sub_long$year, format="%Y-%m-%d")
+  df_T_sub_long$year <- as.numeric(df_T_sub_long$year)
+  
+  # summary(df_T_sub_long)
+  # str(df_T_sub_long)
+  
+  #############
+  ###
+  ###   GAM
+  ###
+  #############
+  
+  # GAM model
+  # thin -plate
+  sub_T_model = gam(value ~ s(longitude, latitude, bs='tp') + s(year),
+                    data=df_T_sub_long, family=gaussian(link="identity"), method="REML")
+  
+  return(sub_T_model)
+}
+
+stations_T <- na.omit(df_T_sub)[, 1:4]
+gam_T_summer <- gam_model('6-20')
+
+
+gam_prediction  <- function(datetime_cz, gam_model) {
+  # interpolation
+  # prepare data for prediction
+  df_pred_T_sub <- coords.cz.re
+  colnames(df_pred_T_sub) <- c('longitude', 'latitude')
+  
+  # predict the weather in 2021 in March
+  date_pred_sub <- as.POSIXct(paste('2021-', datetime_cz, sep=""), format="%Y-%m-%d")
+  date_pred_sub <- as.numeric(date_pred_sub, format="%Y-%m-%d")
+  
+  df_pred_T_sub$year <- date_pred_sub
+  
+  # prediction
+  res_pred_T_sub = predict(gam_model,
+                           df_pred_T_sub, type = "response")
+  df_pred_T_sub$value <- res_pred_T_sub
+  
+  return(df_pred_T_sub)
+}
+
+
+df_pred_gam_summer <- gam_prediction('6-20', gam_T_summer)
+
+
+get_r_data <- function(df_pred){
+  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=195, nrow=150)
+  r_data <- rasterize(x=df_pred[, 1:2], # lon-lat data
+                      y=r_obj, # raster object
+                      field=df_pred$value, # vals to fill raster with
+                      fun=mean) # aggregate function
+}
+
+r_data_summer <- get_r_data(df_pred_gam_summer)
+color_summer <- colorRampPalette(c("#6800ff", "blue", "#00e4ff" , "#00ff93", "#68ff00", "#a6ff00", "yellow", "orange", "red"))
+
+
+plot(r_data_summer, col=color_summer)
+points(stations_T$longitude, stations_T$latitude, pch=20)
 
