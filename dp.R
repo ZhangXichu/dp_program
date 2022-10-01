@@ -650,12 +650,14 @@ nrow(df_SRA)
 
 
 # helpful: example-spatio-temporal data.Rmd
-coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 50), ]
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 10), ]
 
 # reindex
 rownames(coords.cz.re) <- NULL
 
-gam_prediction <- function(datetime_cz) {
+#' Function calculates a GAM model with splines, by default thin-plate
+#'
+gam_model <- function(datetime_cz, df, bs='tp') {
   # prepare the points for interpolation
   # select a subset to low down the resolution
   coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 10), ]
@@ -667,48 +669,43 @@ gam_prediction <- function(datetime_cz) {
   df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
   
   # get the subset for a concrete season
-  df_T_sub<- df_T[, grep(datetime_cz, names(df_T))]
+  df_sub<- df[, grep(datetime_cz, names(df))]
   
-  years_indices <- colnames(df_T)
+  years_indices <- colnames(df)
   # columns of information about the stations
-  df_T_info <- df_T[, seq(1:5)]
+  df_info <- df[, seq(1:5)]
   
-  colnames(df_T_info) <- df_info_indices
+  colnames(df_info) <- df_info_indices
   
-  df_T_sub <- cbind(df_T_info, df_T_sub)
-  stations_T <- na.omit(df_T_sub)[, 1:4]
+  df_sub <- cbind(df_info, df_sub)
+  stations_T <- na.omit(df_sub)[, 1:4]
   
-  df_T_sub_long <- melt(setDT(df_T_sub), id.vars = df_info_indices, variable.name = "year")
+  df_sub_long <- melt(setDT(df_sub), id.vars = df_info_indices, variable.name = "year")
   
   # remove the na values
-  df_T_sub_long <- na.omit(df_T_sub_long)
+  df_sub_long <- na.omit(df_sub_long)
   
   
-  df_T_sub_long$year <- as.character(df_T_sub_long$year)
-  df_T_sub_long$year <- as.POSIXct(df_T_sub_long$year, format="%Y-%m-%d")
-  df_T_sub_long$year <- as.numeric(df_T_sub_long$year)
+  df_sub_long$year <- as.character(df_sub_long$year)
+  df_sub_long$year <- as.POSIXct(df_sub_long$year, format="%Y-%m-%d")
+  df_sub_long$year <- as.numeric(df_sub_long$year)
   
   # summary(df_T_sub_long)
   # str(df_T_sub_long)
-  
-  #############
-  ###
-  ###   GAM
-  ###
-  #############
+
   
   # GAM model
   # thin -plate
-  sub_T_model = gam(value ~ s(longitude, latitude, bs='tp') + s(year),
-                    data=df_T_sub_long, family=gaussian(link="identity"), method="REML")
+  sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(year),
+                    data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
-  return(sub_T_model)
+  return(sub_model)
 }
 
-stations_T <- na.omit(df_T_sub)[, 1:4]
-gam_T_summer <- gam_model('6-20')
+stations_T <- na.omit(df_T)[, 1:4]
 
-
+#' Funtion makes prediction using input GAM model
+#'
 gam_prediction  <- function(datetime_cz, gam_model) {
   # interpolation
   # prepare data for prediction
@@ -729,22 +726,32 @@ gam_prediction  <- function(datetime_cz, gam_model) {
   return(df_pred_T_sub)
 }
 
-
-df_pred_gam_summer <- gam_prediction('6-20', gam_T_summer)
-
-
+#' Function makes a Raster object for ploting
+#'
 get_r_data <- function(df_pred){
-  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=195, nrow=150)
+  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=192, nrow=150)
   r_data <- rasterize(x=df_pred[, 1:2], # lon-lat data
                       y=r_obj, # raster object
                       field=df_pred$value, # vals to fill raster with
                       fun=mean) # aggregate function
 }
 
+
+# Summer
+gam_T_summer <- gam_model('6-20', df_T)
+df_pred_gam_summer <- gam_prediction('6-20', gam_T_summer)
+
 r_data_summer <- get_r_data(df_pred_gam_summer)
 color_summer <- colorRampPalette(c("#6800ff", "blue", "#00e4ff" , "#00ff93", "#68ff00", "#a6ff00", "yellow", "orange", "red"))
-
-
 plot(r_data_summer, col=color_summer)
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
+
+# Autumn
+gam_T_autumn <- gam_model('9-22', df_T)
+df_pred_gam_autumn <- gam_prediction('9-22', gam_T_autumn)
+
+r_data_autumn <- get_r_data(df_pred_gam_autumn)
+color_autumn <- colorRampPalette(c("#6800ff", "blue", "#00e4ff" , "#00ff93", "#68ff00", "#a6ff00", "yellow", "orange", "red"))
+plot(r_data_autumn, col=color_summer)
+points(stations_T$longitude, stations_T$latitude, pch=20)
