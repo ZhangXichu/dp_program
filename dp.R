@@ -655,6 +655,9 @@ coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 10), ]
 # reindex
 rownames(coords.cz.re) <- NULL
 
+
+df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
+
 #' Function calculates a GAM model with splines, by default thin-plate
 #'
 gam_model <- function(datetime_cz, df, bs='tp') {
@@ -666,19 +669,17 @@ gam_model <- function(datetime_cz, df, bs='tp') {
   
   
   # preprocessing
-  df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
+  
   
   # get the subset for a concrete season
   df_sub<- df[, grep(datetime_cz, names(df))]
   
-  years_indices <- colnames(df)
   # columns of information about the stations
   df_info <- df[, seq(1:5)]
   
   colnames(df_info) <- df_info_indices
   
   df_sub <- cbind(df_info, df_sub)
-  stations_T <- na.omit(df_sub)[, 1:4]
   
   df_sub_long <- melt(setDT(df_sub), id.vars = df_info_indices, variable.name = "year")
   
@@ -703,6 +704,7 @@ gam_model <- function(datetime_cz, df, bs='tp') {
 }
 
 stations_T <- na.omit(df_T)[, 1:4]
+colnames(stations_T) <- df_info_indices 
 
 #' Funtion makes prediction using input GAM model
 #'
@@ -712,7 +714,7 @@ gam_prediction  <- function(datetime_cz, gam_model) {
   df_pred_T_sub <- coords.cz.re
   colnames(df_pred_T_sub) <- c('longitude', 'latitude')
   
-  # predict the weather in 2021 in March
+  # predict the weather in 2021 for thr given day
   date_pred_sub <- as.POSIXct(paste('2021-', datetime_cz, sep=""), format="%Y-%m-%d")
   date_pred_sub <- as.numeric(date_pred_sub, format="%Y-%m-%d")
   
@@ -726,6 +728,7 @@ gam_prediction  <- function(datetime_cz, gam_model) {
   return(df_pred_T_sub)
 }
 
+
 #' Function makes a Raster object for ploting
 #'
 get_r_data <- function(df_pred){
@@ -734,7 +737,18 @@ get_r_data <- function(df_pred){
                       y=r_obj, # raster object
                       field=df_pred$value, # vals to fill raster with
                       fun=mean) # aggregate function
+  return(r_data)
 }
+
+
+# Spring
+gam_T_spring <- gam_model('3-20', df_T)
+df_pred_gam_spring <- gam_prediction('3-20', gam_T_spring)
+
+r_data_spring <- get_r_data(df_pred_gam_spring)
+color_spring <- colorRampPalette(c("#2348FF", "#2348FF", "#23FFEB" , "#23FF7A", "#4EFF23", "#9CFF2C", "#FFE52C", "#FFBE28", "#FF9E1B"))(100)
+plot(r_data_spring, col=color_spring)
+points(stations_T$longitude, stations_T$latitude, pch=20)
 
 
 # Summer
@@ -742,7 +756,7 @@ gam_T_summer <- gam_model('6-20', df_T)
 df_pred_gam_summer <- gam_prediction('6-20', gam_T_summer)
 
 r_data_summer <- get_r_data(df_pred_gam_summer)
-color_summer <- colorRampPalette(c("#6800ff", "blue", "#00e4ff" , "#00ff93", "#68ff00", "#a6ff00", "yellow", "orange", "red"))
+color_summer <- colorRampPalette(c("#FFEE83", "#FFDEA4", "#FFBF57" , "#FFAE57", "#FF9E4D", "#FF7849", "#FF4B32", "#EC1111", "#DA0000"))(100)
 plot(r_data_summer, col=color_summer)
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
@@ -752,6 +766,15 @@ gam_T_autumn <- gam_model('9-22', df_T)
 df_pred_gam_autumn <- gam_prediction('9-22', gam_T_autumn)
 
 r_data_autumn <- get_r_data(df_pred_gam_autumn)
-color_autumn <- colorRampPalette(c("#6800ff", "blue", "#00e4ff" , "#00ff93", "#68ff00", "#a6ff00", "yellow", "orange", "red"))
-plot(r_data_autumn, col=color_summer)
+color_autumn <- colorRampPalette(c("#FFFB7C", "#FFEF6B", "#FFEE60" , "#FFE252", "#FFD445", "#FEC739", "#FFC329", "#FF8500", "#FF5200"))(100)
+plot(r_data_autumn, col=color_autumn)
+points(stations_T$longitude, stations_T$latitude, pch=20)
+
+# Winter
+gam_T_winter <- gam_model('12-21', df_T)
+df_pred_gam_winter <- gam_prediction('12-21', gam_T_winter)
+
+r_data_winter <- get_r_data(df_pred_gam_winter)
+color_winter <- colorRampPalette(c("#0007DE", "#0023FF", "#1964FF" , "#5CA6FD", "#68FFF3", "#57ACFF", "#94FF50", "#C9FF05", "#E4F700"))(100)
+plot(r_data_winter, col=color_winter)
 points(stations_T$longitude, stations_T$latitude, pch=20)
