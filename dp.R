@@ -746,7 +746,7 @@ gam_T_spring <- gam_model('3-20', df_T)
 df_pred_gam_spring <- gam_prediction('3-20', gam_T_spring)
 
 r_data_spring <- get_r_data(df_pred_gam_spring)
-color_spring <- colorRampPalette(c("#2348FF", "#2348FF", "#23FFEB" , "#23FF7A", "#4EFF23", "#9CFF2C", "#FFE52C", "#FFBE28", "#FF9E1B"))(100)
+color_spring <- colorRampPalette(c("#63C8FF", "#63DBFF", "#57F5FF" , "#6EFFDD", "#6EFFDD", "#86FFCB", "#A8FFAA", "#FFE997", "#FEE91D"))(100)
 plot(r_data_spring, col=color_spring)
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
@@ -775,6 +775,6 @@ gam_T_winter <- gam_model('12-21', df_T)
 df_pred_gam_winter <- gam_prediction('12-21', gam_T_winter)
 
 r_data_winter <- get_r_data(df_pred_gam_winter)
-color_winter <- colorRampPalette(c("#0007DE", "#0023FF", "#1964FF" , "#5CA6FD", "#68FFF3", "#57ACFF", "#94FF50", "#C9FF05", "#E4F700"))(100)
+color_winter <- colorRampPalette(c("#0007DE", "#0023FF", "#1964FF" , "#5CA6FD", "#57ACFF", "#57ACFF", "#6FCAFF", "#8DF1FF", "#9EFFD7"))(100)
 plot(r_data_winter, col=color_winter)
 points(stations_T$longitude, stations_T$latitude, pch=20)
