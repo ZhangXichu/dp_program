@@ -1,3 +1,11 @@
+# check all the installed packages
+ip = as.data.frame(installed.packages()[,c(1,3:4)])
+ip = ip[is.na(ip$Priority),1:2,drop=FALSE]
+ip
+
+setwd('C:/workspace/R/dp')
+
+
 library(sp) # for data meuse
 library(gstat) # for function variogram
 library(spatstat) # for runifpoint, ppp, swedishpines
@@ -26,6 +34,11 @@ library(readxl)
 library(tibble)
 library(ggplot2)
 library(sf)
+library(Rce)
+library(RCzechia)
+library(reshape)
+library(data.table)
+library(mgcv) # for GAM
 
 ##########################################
 # Spatial variogram
@@ -696,7 +709,11 @@ gam_model <- function(datetime_cz, df, bs='tp') {
 
   
   # GAM model
-  # thin -plate
+  # tensor product interactive term
+  # sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(year) + ti(longitude, latitude, year, d=c(2, 1)),
+  #                   data=df_sub_long, family=gaussian(link="identity"), method="REML")
+  # 
+  # thin - plate
   sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(year),
                     data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
@@ -729,6 +746,13 @@ gam_prediction  <- function(datetime_cz, gam_model) {
 }
 
 
+
+
+long_max <- max(coords.cz$x)
+long_min <- min(coords.cz$x)
+la_max <- max(coords.cz$y)
+la_min <- min(coords.cz$y)
+
 #' Function makes a Raster object for ploting
 #'
 get_r_data <- function(df_pred){
@@ -741,13 +765,16 @@ get_r_data <- function(df_pred){
 }
 
 
+par(mfrow=c(2, 2))
+par(mar = c(1.5, 2, 2.5, 1))
+
 # Spring
 gam_T_spring <- gam_model('3-20', df_T)
 df_pred_gam_spring <- gam_prediction('3-20', gam_T_spring)
 
 r_data_spring <- get_r_data(df_pred_gam_spring)
 color_spring <- colorRampPalette(c("#63C8FF", "#63DBFF", "#57F5FF" , "#6EFFDD", "#6EFFDD", "#86FFCB", "#A8FFAA", "#FFE997", "#FEE91D"))(100)
-plot(r_data_spring, col=color_spring)
+plot(r_data_spring, col=color_spring, main="Spring")
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
 
@@ -757,7 +784,7 @@ df_pred_gam_summer <- gam_prediction('6-20', gam_T_summer)
 
 r_data_summer <- get_r_data(df_pred_gam_summer)
 color_summer <- colorRampPalette(c("#FFEE83", "#FFDEA4", "#FFBF57" , "#FFAE57", "#FF9E4D", "#FF7849", "#FF4B32", "#EC1111", "#DA0000"))(100)
-plot(r_data_summer, col=color_summer)
+plot(r_data_summer, col=color_summer, main="Summer")
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
 
@@ -767,7 +794,7 @@ df_pred_gam_autumn <- gam_prediction('9-22', gam_T_autumn)
 
 r_data_autumn <- get_r_data(df_pred_gam_autumn)
 color_autumn <- colorRampPalette(c("#FFFB7C", "#FFEF6B", "#FFEE60" , "#FFE252", "#FFD445", "#FEC739", "#FFC329", "#FF8500", "#FF5200"))(100)
-plot(r_data_autumn, col=color_autumn)
+plot(r_data_autumn, col=color_autumn, main="Autumn")
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
 # Winter
@@ -776,5 +803,5 @@ df_pred_gam_winter <- gam_prediction('12-21', gam_T_winter)
 
 r_data_winter <- get_r_data(df_pred_gam_winter)
 color_winter <- colorRampPalette(c("#0007DE", "#0023FF", "#1964FF" , "#5CA6FD", "#57ACFF", "#57ACFF", "#6FCAFF", "#8DF1FF", "#9EFFD7"))(100)
-plot(r_data_winter, col=color_winter)
+plot(r_data_winter, col=color_winter, main="Winter")
 points(stations_T$longitude, stations_T$latitude, pch=20)
