@@ -39,6 +39,7 @@ library(RCzechia)
 library(reshape)
 library(data.table)
 library(mgcv) # for GAM
+library(RColorBrewer)
 
 ##########################################
 # Spatial variogram
@@ -651,19 +652,23 @@ coords.cz <- as.data.frame(coords.cz)
 
 
 # read the data
+# average temperature
 df_T <- readRDS("DATA/CHMU_Output/df_T_Hodnota_V1.32.rds")
 nrow(df_T)
 df_T[, ncol(df_T)]
-df_TMA <- readRDS("DATA/CHMU_Output/df_TMA_Hodnota_V1.32.rds")
-nrow(df_TMA)
-df_TMI <- readRDS("DATA/CHMU_Output/df_TMI_Hodnota_V1.32.rds")
-nrow(df_TMI)
+num_cols_T <- ncol(df_T)
+mat_T <- as.matrix(df_T[, c(6: (num_cols_T-5))])
+min(mat_T, na.rm=TRUE)
+max(mat_T, na.rm=TRUE)
+
+# srazky
 df_SRA <- readRDS("DATA/CHMU_Output/df_SRA_Hodnota_V1.32.rds")
 nrow(df_SRA)
 
 
 # helpful: example-spatio-temporal data.Rmd
 coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 10), ]
+
 
 # reindex
 rownames(coords.cz.re) <- NULL
@@ -676,7 +681,7 @@ df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'alt
 gam_model <- function(datetime_cz, df, bs='tp') {
   # prepare the points for interpolation
   # select a subset to low down the resolution
-  coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 10), ]
+  coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
   # reindex
   rownames(coords.cz.re) <- NULL
   
@@ -756,7 +761,7 @@ la_min <- min(coords.cz$y)
 #' Function makes a Raster object for ploting
 #'
 get_r_data <- function(df_pred){
-  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=192, nrow=150)
+  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=300, nrow=250)
   r_data <- rasterize(x=df_pred[, 1:2], # lon-lat data
                       y=r_obj, # raster object
                       field=df_pred$value, # vals to fill raster with
@@ -768,13 +773,22 @@ get_r_data <- function(df_pred){
 par(mfrow=c(2, 2))
 par(mar = c(1.5, 2, 2.5, 1))
 
+# color template
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+sc <- scale_fill_gradientn(colours = myPalette(100), limits=c(-10, 25))
+
 # Spring
 gam_T_spring <- gam_model('3-20', df_T)
 df_pred_gam_spring <- gam_prediction('3-20', gam_T_spring)
 
 r_data_spring <- get_r_data(df_pred_gam_spring)
-color_spring <- colorRampPalette(c("#63C8FF", "#63DBFF", "#57F5FF" , "#6EFFDD", "#6EFFDD", "#86FFCB", "#A8FFAA", "#FFE997", "#FEE91D"))(100)
-plot(r_data_spring, col=color_spring, main="Spring")
+
+r_data_spring_pts <- rasterToPoints(r_data_spring, spatial = TRUE)
+r_data_spring_df  <- data.frame(r_data_spring_pts)
+
+ggplot() +
+  geom_raster(data=r_data_spring_df, aes(x=x, y=y, fill=layer)) +
+  sc
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
 
@@ -785,6 +799,14 @@ df_pred_gam_summer <- gam_prediction('6-20', gam_T_summer)
 r_data_summer <- get_r_data(df_pred_gam_summer)
 color_summer <- colorRampPalette(c("#FFEE83", "#FFDEA4", "#FFBF57" , "#FFAE57", "#FF9E4D", "#FF7849", "#FF4B32", "#EC1111", "#DA0000"))(100)
 plot(r_data_summer, col=color_summer, main="Summer")
+points(stations_T$longitude, stations_T$latitude, pch=20)
+
+r_data_summer_pts <- rasterToPoints(r_data_summer, spatial = TRUE)
+r_data_summer_df  <- data.frame(r_data_summer_pts)
+
+ggplot() +
+  geom_raster(data=r_data_summer_df, aes(x=x, y=y, fill=layer)) +
+  scale_fill_gradientn(colours=myPalette(100),limits=c(-10, 25))
 points(stations_T$longitude, stations_T$latitude, pch=20)
 
 
@@ -805,3 +827,7 @@ r_data_winter <- get_r_data(df_pred_gam_winter)
 color_winter <- colorRampPalette(c("#0007DE", "#0023FF", "#1964FF" , "#5CA6FD", "#57ACFF", "#57ACFF", "#6FCAFF", "#8DF1FF", "#9EFFD7"))(100)
 plot(r_data_winter, col=color_winter, main="Winter")
 points(stations_T$longitude, stations_T$latitude, pch=20)
+
+
+# try ggplot
+par(mfrow=c(1, 1))
