@@ -40,6 +40,7 @@ library(reshape)
 library(data.table)
 library(mgcv) # for GAM
 library(RColorBrewer)
+library(gridExtra) # for arranging plots made by ggplot
 
 ##########################################
 # Spatial variogram
@@ -530,12 +531,6 @@ Covariogram(fit.teo, vario=fit, fix.lagt=1, fix.lags=1, show.vario=TRUE, pch=20)
 #### Using function Kri
 ################################################################
 
-# min(coords[,1])
-# max(coords[,1])
-# 
-# min(coords[,2])
-# max(coords[,2])
-
 xx<-seq(0,1,0.01)
 # xx<-seq(0,1,0.02)
 loc_to_pred<-as.matrix(expand.grid(xx,xx))
@@ -589,9 +584,8 @@ for(i in 1:3){
 ##################################
 # Implementation part
 #################################
-setwd('C:/workspace/R/dp')
 
-path_excel <- "data/import_stations_parameters_V1.20.xlsx"
+path_excel <- "DATA/Archive/import_stations_parameters_V1.20.xlsx"
 table_stations <- read_excel(path_excel)
 
 head(table_stations)
@@ -637,7 +631,6 @@ ggplot() +
               fill = "gray30",  show.legend = F) + # no legend is necessary
   geom_sf(data = subset(RCzechia::reky(), Major == T), # major rivers
           color = "steelblue", alpha = .7) +
-  labs(title = "Sampling stations") +
   geom_sf(data = df_geo,  color = "black", pch = 4) +  # X marks the spot!
   theme_bw() +
   theme(axis.title = element_blank())
@@ -649,48 +642,57 @@ sp.df <- vyskopis("rayshaded") %>% as("SpatialPixelsDataFrame")
 
 coords.cz <- coordinates(sp.df)
 coords.cz <- as.data.frame(coords.cz)
-
+coords.cz$z <- sp.df@data[["raytraced"]] # add ealtitude
 
 # read the data
 # average temperature
 df_T <- readRDS("DATA/CHMU_Output/df_T_Hodnota_V1.32.rds")
 nrow(df_T)
+df_T_n <- na.omit(df_T)
+
 df_T[, ncol(df_T)]
 num_cols_T <- ncol(df_T)
 mat_T <- as.matrix(df_T[, c(6: (num_cols_T-5))])
-min(mat_T, na.rm=TRUE)
-max(mat_T, na.rm=TRUE)
+min_T <- min(mat_T, na.rm=TRUE)
+max_T <- max(mat_T, na.rm=TRUE)
 
-# srazky
-df_SRA <- readRDS("DATA/CHMU_Output/df_SRA_Hodnota_V1.32.rds")
-nrow(df_SRA)
+lst_T <- unlist(df_T[, c(6: (num_cols_T-5))])
+# all the values from the average temperature table without Na
+lst_T <- lst_T[!is.na(lst_T)]
 
-
-# helpful: example-spatio-temporal data.Rmd
-coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 10), ]
+plot(density(lst_T))
+quantile(lst_T, probs=0.25)
+quantile(lst_T, probs=0.75)
 
 
 # reindex
-rownames(coords.cz.re) <- NULL
+# (coords.cz.re) <- NULL
 
 
 df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
 
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
+
 #' Function calculates a GAM model with splines, by default thin-plate
 #'
-gam_model <- function(datetime_cz, df, bs='tp') {
+#' year: if seasonal is set to FALSE, choose the data from a whole year and make a one-day-head prediction
+gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020) {
+  
   # prepare the points for interpolation
   # select a subset to low down the resolution
-  coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
+  
   # reindex
   rownames(coords.cz.re) <- NULL
   
   
   # preprocessing
   
-  
   # get the subset for a concrete season
-  df_sub<- df[, grep(datetime_cz, names(df))]
+  if (seasonal) {
+    df_sub<- df[, grep(datetime_cz, names(df))]
+  } else { # take data of one year
+    df_sub<- df[, grep(year, names(df))]
+  }
   
   # columns of information about the stations
   df_info <- df[, seq(1:5)]
@@ -698,8 +700,9 @@ gam_model <- function(datetime_cz, df, bs='tp') {
   colnames(df_info) <- df_info_indices
   
   df_sub <- cbind(df_info, df_sub)
-  
+
   df_sub_long <- melt(setDT(df_sub), id.vars = df_info_indices, variable.name = "year")
+
   
   # remove the na values
   df_sub_long <- na.omit(df_sub_long)
@@ -714,19 +717,28 @@ gam_model <- function(datetime_cz, df, bs='tp') {
 
   
   # GAM model
+  
+  # document: s function: https://www.rdocumentation.org/packages/gam/versions/1.20.1/topics/s
+  # document: ti function: https://www.rdocumentation.org/packages/tis/versions/1.39/topics/ti (compare with te - add to text)
+  #            more details: https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/te.html
+  
+  # model I
   # tensor product interactive term
-  # sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(year) + ti(longitude, latitude, year, d=c(2, 1)),
-  #                   data=df_sub_long, family=gaussian(link="identity"), method="REML")
-  # 
-  # thin - plate
-  sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(year),
+  sub_model = gam(value ~ s(longitude, latitude) + s(altitude)+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
                     data=df_sub_long, family=gaussian(link="identity"), method="REML")
+  
+  # 
+  # thin - plate without interaction
+  # sub_model = gam(value ~ s(longitude, latitude, altitude, bs=bs) + s(year),
+  #                   data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   return(sub_model)
 }
 
-stations_T <- na.omit(df_T)[, 1:4]
+stations_T <- na.omit(df_T)[, 1:5]
 colnames(stations_T) <- df_info_indices 
+
+write.csv(stations_T, "ststions_T.csv", row.names = FALSE)
 
 #' Funtion makes prediction using input GAM model
 #'
@@ -734,7 +746,7 @@ gam_prediction  <- function(datetime_cz, gam_model) {
   # interpolation
   # prepare data for prediction
   df_pred_T_sub <- coords.cz.re
-  colnames(df_pred_T_sub) <- c('longitude', 'latitude')
+  colnames(df_pred_T_sub) <- c('longitude', 'latitude', 'altitude')
   
   # predict the weather in 2021 for thr given day
   date_pred_sub <- as.POSIXct(paste('2021-', datetime_cz, sep=""), format="%Y-%m-%d")
@@ -749,8 +761,6 @@ gam_prediction  <- function(datetime_cz, gam_model) {
   
   return(df_pred_T_sub)
 }
-
-
 
 
 long_max <- max(coords.cz$x)
@@ -770,64 +780,123 @@ get_r_data <- function(df_pred){
 }
 
 
-par(mfrow=c(2, 2))
-par(mar = c(1.5, 2, 2.5, 1))
-
 # color template
-myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
-sc <- scale_fill_gradientn(colours = myPalette(100), limits=c(-10, 25))
+myPalette <- colorRampPalette(rev(brewer.pal(n=9, "Spectral")))
+sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-2, 22))
 
 # Spring
-gam_T_spring <- gam_model('3-20', df_T)
+gam_T_spring <- gam_model(df_T, datetime_cz='3-20')
 df_pred_gam_spring <- gam_prediction('3-20', gam_T_spring)
+
+summary(gam_T_spring)
+# get the degree of freedom 
+gam_T_spring_f <- family(gam_T_spring)
+gam_T_spring_f$getTheta(trans=TRUE)
+
 
 r_data_spring <- get_r_data(df_pred_gam_spring)
 
 r_data_spring_pts <- rasterToPoints(r_data_spring, spatial = TRUE)
 r_data_spring_df  <- data.frame(r_data_spring_pts)
 
-ggplot() +
-  geom_raster(data=r_data_spring_df, aes(x=x, y=y, fill=layer)) +
-  sc
-points(stations_T$longitude, stations_T$latitude, pch=20)
-
 
 # Summer
-gam_T_summer <- gam_model('6-20', df_T)
+gam_T_summer <- gam_model(df_T, datetime_cz='6-20')
 df_pred_gam_summer <- gam_prediction('6-20', gam_T_summer)
 
 r_data_summer <- get_r_data(df_pred_gam_summer)
-color_summer <- colorRampPalette(c("#FFEE83", "#FFDEA4", "#FFBF57" , "#FFAE57", "#FF9E4D", "#FF7849", "#FF4B32", "#EC1111", "#DA0000"))(100)
-plot(r_data_summer, col=color_summer, main="Summer")
-points(stations_T$longitude, stations_T$latitude, pch=20)
+
 
 r_data_summer_pts <- rasterToPoints(r_data_summer, spatial = TRUE)
 r_data_summer_df  <- data.frame(r_data_summer_pts)
 
-ggplot() +
-  geom_raster(data=r_data_summer_df, aes(x=x, y=y, fill=layer)) +
-  scale_fill_gradientn(colours=myPalette(100),limits=c(-10, 25))
-points(stations_T$longitude, stations_T$latitude, pch=20)
-
 
 # Autumn
-gam_T_autumn <- gam_model('9-22', df_T)
+gam_T_autumn <- gam_model(df_T, datetime_cz='9-22')
 df_pred_gam_autumn <- gam_prediction('9-22', gam_T_autumn)
 
 r_data_autumn <- get_r_data(df_pred_gam_autumn)
-color_autumn <- colorRampPalette(c("#FFFB7C", "#FFEF6B", "#FFEE60" , "#FFE252", "#FFD445", "#FEC739", "#FFC329", "#FF8500", "#FF5200"))(100)
-plot(r_data_autumn, col=color_autumn, main="Autumn")
-points(stations_T$longitude, stations_T$latitude, pch=20)
+
+r_data_autumn_pts <- rasterToPoints(r_data_autumn, spatial = TRUE)
+r_data_autumn_df  <- data.frame(r_data_autumn_pts)
+
 
 # Winter
-gam_T_winter <- gam_model('12-21', df_T)
+gam_T_winter <- gam_model(df_T, datetime_cz='12-21')
 df_pred_gam_winter <- gam_prediction('12-21', gam_T_winter)
 
 r_data_winter <- get_r_data(df_pred_gam_winter)
-color_winter <- colorRampPalette(c("#0007DE", "#0023FF", "#1964FF" , "#5CA6FD", "#57ACFF", "#57ACFF", "#6FCAFF", "#8DF1FF", "#9EFFD7"))(100)
-plot(r_data_winter, col=color_winter, main="Winter")
-points(stations_T$longitude, stations_T$latitude, pch=20)
+
+r_data_winter_pts <- rasterToPoints(r_data_winter, spatial = TRUE)
+r_data_winter_df  <- data.frame(r_data_winter_pts)
+
+# save the models
+saveRDS(gam_T_spring, file = "models/gam_T_spring.rds")
+saveRDS(gam_T_summer, file = "models/gam_T_summer.rds")
+saveRDS(gam_T_autumn, file = "models/gam_T_sutumn.rds")
+saveRDS(gam_T_winter, file = "models/gam_T_winter.rds")
+
+plot_T <- function() {
+  g1 <- ggplot() +
+    geom_raster(data=r_data_spring_df, aes(x=x, y=y, fill=layer)) +
+    sc +
+    geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
+    ggtitle("3-20") +
+    theme(plot.title=element_text(hjust = 0.5)) +
+    xlab("longitude") + ylab("latitude") +
+    labs(fill = "")
+  
+  g2 <- ggplot() +
+    geom_raster(data=r_data_summer_df, aes(x=x, y=y, fill=layer)) +
+    sc +
+    geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) + 
+    ggtitle("6-20") +
+    theme(plot.title=element_text(hjust = 0.5)) +
+    xlab("longitude") + ylab("latitude") +
+    labs(fill = "")
+  
+  g3 <- ggplot() +
+    geom_raster(data=r_data_autumn_df, aes(x=x, y=y, fill=layer)) +
+    sc +
+    geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) + 
+    ggtitle("9-22") +
+    theme(plot.title=element_text(hjust = 0.5)) +
+    xlab("longitude") + ylab("latitude") +
+    labs(fill = "")
+  
+  g4 <- ggplot() +
+    geom_raster(data=r_data_winter_df, aes(x=x, y=y, fill=layer)) +
+    sc +
+    geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
+    ggtitle("12-22") +
+    theme(plot.title=element_text(hjust = 0.5)) +
+    xlab("longitude") + ylab("latitude") +
+    labs(fill = "")
+  
+  grid.arrange(g1, g2, g3, g4, nrow = 2, ncol=2)
+}
+
+plot_T()
+
+# plot the model info of gam_T_spring
+par(mfrow=c(2, 2))
+par(mar = c(2, 1.5, 2, 1))
+plot(gam_T_spring, all.terms=TRUE)
+
+# one year ahead prediction
+gam_year_T <- gam_model(df_T, year=2020)
+df_pred_year_T <- gam_prediction('9-22', gam_year_T)
+
+r_data_year_T <- get_r_data(df_pred_year_T)
+
+r_data_year_pts <- rasterToPoints(r_data_year_T, spatial = TRUE)
+r_data_year_df  <- data.frame(r_data_year_pts)
 
 
-# try ggplot
-par(mfrow=c(1, 1))
+
+########################
+# srazky
+########################
+df_SRA <- readRDS("DATA/CHMU_Output/df_SRA_Hodnota_V1.32.rds")
+nrow(df_SRA)
+
