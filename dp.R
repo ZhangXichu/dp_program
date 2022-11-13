@@ -609,6 +609,7 @@ for (i in 1:len_df_station) {
   y <- as.double(table_stations[i, "latitude"])
   points[[i]] <- st_point(c(x, y))
 }
+
 # create a list of geometric features
 lst_geo <- do.call(st_sfc, points)
 # convert to SF object
@@ -884,14 +885,56 @@ par(mar = c(2, 1.5, 2, 1))
 plot(gam_T_spring, all.terms=TRUE)
 
 # one year ahead prediction
-gam_year_T <- gam_model(df_T, year=2020)
-df_pred_year_T <- gam_prediction('9-22', gam_year_T)
+gam_year_T <- gam_model(df_T, year=2020, seasonal=FALSE)
+df_pred_year_T <- gam_prediction('01-01', gam_year_T)
 
 r_data_year_T <- get_r_data(df_pred_year_T)
 
 r_data_year_pts <- rasterToPoints(r_data_year_T, spatial = TRUE)
 r_data_year_df  <- data.frame(r_data_year_pts)
 
+ggplot() +
+  geom_raster(data=r_data_year_df, aes(x=x, y=y, fill=layer)) +
+  sc +
+  geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
+  ggtitle("1-1-2021") +
+  theme(plot.title=element_text(hjust = 0.5)) +
+  xlab("longitude") + ylab("latitude") +
+  labs(fill = "")
+
+saveRDS(gam_year_T, file = "models/gam_year_T.rds")
+
+# seasonal again
+# for comparing with the one-day head version
+gam_T_day <- gam_model(df_T, datetime_cz='01-01')
+df_pred_gam_day <- gam_prediction('01-01', gam_T_day)
+
+
+r_data_day_T <- get_r_data(df_pred_gam_day)
+
+r_data_day_pts <- rasterToPoints(r_data_day_T, spatial = TRUE)
+r_data_day_df  <- data.frame(r_data_day_pts)
+
+ggplot() +
+  geom_raster(data=r_data_day_df, aes(x=x, y=y, fill=layer)) +
+  sc +
+  geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
+  ggtitle("1-1-2021") +
+  theme(plot.title=element_text(hjust = 0.5)) +
+  xlab("longitude") + ylab("latitude") +
+  labs(fill = "")
+
+# plot the model info of gam_T_spring
+par(mfrow=c(2, 2))
+par(mar = c(3, 2, 2, 1))
+plot(gam_T_day, all.terms=TRUE)
+
+saveRDS(gam_T_day, file = "models/gam_T_day.rds")
+
+
+# some analysis
+df_T_na <- na.omit(df_T)
+df_T_1 <- df_T_na[, grep('01-01', names(df_T_na))]
 
 
 ########################
