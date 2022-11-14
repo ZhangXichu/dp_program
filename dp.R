@@ -610,13 +610,6 @@ for (i in 1:len_df_station) {
   points[[i]] <- st_point(c(x, y))
 }
 
-# create a list of geometric features
-lst_geo <- do.call(st_sfc, points)
-# convert to SF object
-df_geo <- st_as_sf(lst_geo)
-# set CRS
-st_crs(df_geo) <- 4326
-df_geo
 
 # reference: https://cran.r-project.org/web/packages/RCzechia/vignettes/vignette.html
 
@@ -639,7 +632,6 @@ ggplot() +
 
 res_vyskopis <-  vyskopis("rayshaded")
 sp.df <- vyskopis("rayshaded") %>% as("SpatialPixelsDataFrame")
-# plot(sp.df)
 
 coords.cz <- coordinates(sp.df)
 coords.cz <- as.data.frame(coords.cz)
@@ -651,20 +643,21 @@ df_T <- readRDS("DATA/CHMU_Output/df_T_Hodnota_V1.32.rds")
 nrow(df_T)
 df_T_n <- na.omit(df_T)
 
+# check the last column
 df_T[, ncol(df_T)]
+
 num_cols_T <- ncol(df_T)
 mat_T <- as.matrix(df_T[, c(6: (num_cols_T-5))])
 min_T <- min(mat_T, na.rm=TRUE)
 max_T <- max(mat_T, na.rm=TRUE)
 
-lst_T <- unlist(df_T[, c(6: (num_cols_T-5))])
-# all the values from the average temperature table without Na
-lst_T <- lst_T[!is.na(lst_T)]
-
-plot(density(lst_T))
-quantile(lst_T, probs=0.25)
-quantile(lst_T, probs=0.75)
-
+# lst_T <- unlist(df_T[, c(6: (num_cols_T-5))])
+# # all the values from the average temperature table without Na
+# lst_T <- lst_T[!is.na(lst_T)]
+# 
+# plot(density(lst_T))
+# quantile(lst_T, probs=0.25)
+# quantile(lst_T, probs=0.75)
 
 # reindex
 # (coords.cz.re) <- NULL
@@ -725,12 +718,14 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
   
   # model I
   # tensor product interactive term
-  sub_model = gam(value ~ s(longitude, latitude) + s(altitude)+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
+  sub_model = gam(value ~ s(longitude, latitude, altitude, bs='tp')+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
                     data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   # 
-  # thin - plate without interaction
-  # sub_model = gam(value ~ s(longitude, latitude, altitude, bs=bs) + s(year),
+  # thin - plate without interaction # TODO: rerun this for the four seasons
+                                          # separate the altitude from the longitude and latitude
+                                          # to make model I an extension of this model
+  # sub_model = gam(value ~ s(longitude, latitude, altitude, bs='tp') + s(year),
   #                   data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   return(sub_model)
@@ -739,7 +734,7 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
 stations_T <- na.omit(df_T)[, 1:5]
 colnames(stations_T) <- df_info_indices 
 
-write.csv(stations_T, "ststions_T.csv", row.names = FALSE)
+write.csv(stations_T, "stations_T.csv", row.names = FALSE)
 
 #' Funtion makes prediction using input GAM model
 #'
@@ -903,11 +898,13 @@ ggplot() +
   labs(fill = "")
 
 saveRDS(gam_year_T, file = "models/gam_year_T.rds")
+saveRDS(df_pred_year_T, file = "models/df_pred_year_T.rds")
 
 # seasonal again
 # for comparing with the one-day head version
 gam_T_day <- gam_model(df_T, datetime_cz='01-01')
 df_pred_gam_day <- gam_prediction('01-01', gam_T_day)
+
 
 
 r_data_day_T <- get_r_data(df_pred_gam_day)
