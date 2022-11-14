@@ -3,7 +3,7 @@ ip = as.data.frame(installed.packages()[,c(1,3:4)])
 ip = ip[is.na(ip$Priority),1:2,drop=FALSE]
 ip
 
-setwd('C:/workspace/R/dp')
+setwd('C:/workspace/dp_program')
 
 
 library(sp) # for data meuse
@@ -17,7 +17,11 @@ library(assist) # for the dataset |climate|
 library(tidyverse)
 # Sys.setenv(PATH="%PATH%;C:/Rtools/gcc-4.6.3/bin;c:/Rtools/bin")
 library(maps)
-library(rgl)
+
+
+library(rgl) # TODO
+
+
 # library(rworldmap)
 library(raster) # for function brick
 library(rgdal)
@@ -25,6 +29,10 @@ library(rasterVis)
 library(usdm)
 library(quadmesh)
 library(spacetime)
+
+# require(devtools)
+# install.packages("https://cran.r-project.org/src/contrib/Archive/CompRandFld/CompRandFld_1.0.3-1.tar.gz", repos = NULL, type="source")
+
 library(CompRandFld) # for the simulation of spatio-temporal data
 library(fields) # for |image.plot| function
 require(scatterplot3d)
@@ -34,11 +42,13 @@ library(readxl)
 library(tibble)
 library(ggplot2)
 library(sf)
-library(Rce)
-library(RCzechia)
+
+# install.packages("https://cran.r-project.org/src/contrib/Archive/CompRandFld/CompRandFld_1.0.3-1.tar.gz", repos = NULL, type="source")
+# library(Rce)
+
 library(reshape)
 library(data.table)
-library(mgcv) # for GAM
+library(mgcv) # for GA
 library(RColorBrewer)
 library(gridExtra) # for arranging plots made by ggplot
 
@@ -701,14 +711,10 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
   # remove the na values
   df_sub_long <- na.omit(df_sub_long)
   
-  
+
   df_sub_long$year <- as.character(df_sub_long$year)
   df_sub_long$year <- as.POSIXct(df_sub_long$year, format="%Y-%m-%d")
   df_sub_long$year <- as.numeric(df_sub_long$year)
-  
-  # summary(df_T_sub_long)
-  # str(df_T_sub_long)
-
   
   # GAM model
   
@@ -718,23 +724,21 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
   
   # model I
   # tensor product interactive term
-  sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(altitude, bs=bs)+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
-                    data=df_sub_long, family=gaussian(link="identity"), method="REML")
+  #sub_model = gam(value ~ s(longitude, latitude) +s(altitude, bs=bs) + s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
+  #                 data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   # 
   # thin - plate without interaction # TODO: rerun this for the four seasons
                                           # separate the altitude from the longitude and latitude
                                           # to make model I an extension of this model
-  # sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(altitude, bs=bs) + s(year),
-  #                   data=df_sub_long, family=gaussian(link="identity"), method="REML")
+  sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(altitude, bs=bs) + s(year),
+                     data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   return(sub_model)
 }
 
 stations_T <- na.omit(df_T)[, 1:5]
 colnames(stations_T) <- df_info_indices 
-
-write.csv(stations_T, "stations_T.csv", row.names = FALSE)
 
 #' Funtion makes prediction using input GAM model
 #'
@@ -785,6 +789,7 @@ gam_T_spring <- gam_model(df_T, datetime_cz='3-20')
 df_pred_gam_spring <- gam_prediction('3-20', gam_T_spring)
 
 summary(gam_T_spring)
+
 # get the degree of freedom 
 gam_T_spring_f <- family(gam_T_spring)
 gam_T_spring_f$getTheta(trans=TRUE)
@@ -827,10 +832,10 @@ r_data_winter_pts <- rasterToPoints(r_data_winter, spatial = TRUE)
 r_data_winter_df  <- data.frame(r_data_winter_pts)
 
 # save the models
-saveRDS(gam_T_spring, file = "models/gam_T_spring.rds")
-saveRDS(gam_T_summer, file = "models/gam_T_summer.rds")
-saveRDS(gam_T_autumn, file = "models/gam_T_sutumn.rds")
-saveRDS(gam_T_winter, file = "models/gam_T_winter.rds")
+# saveRDS(gam_T_spring, file = "models/gam_T_spring.rds")
+# saveRDS(gam_T_summer, file = "models/gam_T_summer.rds")
+# saveRDS(gam_T_autumn, file = "models/gam_T_sutumn.rds")
+# saveRDS(gam_T_winter, file = "models/gam_T_winter.rds")
 
 plot_T <- function() {
   g1 <- ggplot() +
@@ -874,12 +879,14 @@ plot_T <- function() {
 
 plot_T()
 
+plot(g1)
+
 # plot the model info of gam_T_spring
 par(mfrow=c(2, 2))
 par(mar = c(2, 1.5, 2, 1))
 plot(gam_T_spring, all.terms=TRUE)
 
-# one year ahead prediction
+# one day ahead prediction
 gam_year_T <- gam_model(df_T, year=2020, seasonal=FALSE)
 df_pred_year_T <- gam_prediction('01-01', gam_year_T)
 
