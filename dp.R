@@ -718,14 +718,14 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
   
   # model I
   # tensor product interactive term
-  sub_model = gam(value ~ s(longitude, latitude, altitude, bs='tp')+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
+  sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(altitude, bs=bs)+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
                     data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   # 
   # thin - plate without interaction # TODO: rerun this for the four seasons
                                           # separate the altitude from the longitude and latitude
                                           # to make model I an extension of this model
-  # sub_model = gam(value ~ s(longitude, latitude, altitude, bs='tp') + s(year),
+  # sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(altitude, bs=bs) + s(year),
   #                   data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   return(sub_model)
@@ -934,9 +934,9 @@ df_T_na <- na.omit(df_T)
 df_T_1 <- df_T_na[, grep('01-01', names(df_T_na))]
 
 
-########################
-# srazky
-########################
-df_SRA <- readRDS("DATA/CHMU_Output/df_SRA_Hodnota_V1.32.rds")
-nrow(df_SRA)
-
+############################
+#
+# Application :
+# Kriging
+#
+##############################
