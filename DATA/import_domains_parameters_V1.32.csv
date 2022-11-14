@@ -1,0 +1,12 @@
+id_domain|domain|x|unit
+SCE|Celková výška sněhové pokrývky|SCE.07:00|cm
+SSV|Denní úhrn doby trvání slunečního svitu|SSV.00:00|hod
+SRA|Denní úhrn srážek|SRA.07:00|mm
+TMA|Maximální denní teplota vzduchu|TMA.21:00|°C
+Fmax|Maximální rychlost větru|Fmax.00:00|m/s
+TMI|Minimální denní teplota vzduchu|TMI.21:00|°C
+H|Průměrná denní relativní vlhkost vzduchu|H.AVG|%
+F|Průměrná denní rychlost větru|F.AVG|m/s
+T|Průměrná denní teplota vzduchu|T.AVG|°C
+P|Průměrný denní tlak vzduchu|P.AVG|hPa
+SNO|Výška nového sněhu|SNO.07:00|cm

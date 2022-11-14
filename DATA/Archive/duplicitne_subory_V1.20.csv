@@ -1,0 +1,27 @@
+zip_name|csv_name|duplicates|id_station|id_domain|domain|unit|id_region|region|data_rows|OPEN_EXPORT|FILE_CREATE_DATE
+O1REJV01_F_N.csv.zip|O1REJV01_F_N.csv|2|O1REJV01|F|Průměrná denní rychlost větru|m/s|CZ080|Moravskoslezský kraj|5295|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_F_N.csv.zip|O1REJV01_F_N.csv|2|O1REJV01|F|Průměrná denní rychlost větru|m/s|CZ071|Olomoucký kraj|5295|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_H_N.csv.zip|O1REJV01_H_N.csv|2|O1REJV01|H|Průměrná denní relativní vlhkost vzduchu|%|CZ080|Moravskoslezský kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_H_N.csv.zip|O1REJV01_H_N.csv|2|O1REJV01|H|Průměrná denní relativní vlhkost vzduchu|%|CZ071|Olomoucký kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SCE_N.csv.zip|O1REJV01_SCE_N.csv|2|O1REJV01|SCE|Celková výška sněhové pokrývky|cm|CZ080|Moravskoslezský kraj|14730|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SCE_N.csv.zip|O1REJV01_SCE_N.csv|2|O1REJV01|SCE|Celková výška sněhové pokrývky|cm|CZ071|Olomoucký kraj|14730|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SNO_N.csv.zip|O1REJV01_SNO_N.csv|2|O1REJV01|SNO|Výška nového sněhu|cm|CZ080|Moravskoslezský kraj|14730|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SNO_N.csv.zip|O1REJV01_SNO_N.csv|2|O1REJV01|SNO|Výška nového sněhu|cm|CZ071|Olomoucký kraj|14730|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SRA_N.csv.zip|O1REJV01_SRA_N.csv|2|O1REJV01|SRA|Denní úhrn srážek|mm|CZ080|Moravskoslezský kraj|14853|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SRA_N.csv.zip|O1REJV01_SRA_N.csv|2|O1REJV01|SRA|Denní úhrn srážek|mm|CZ071|Olomoucký kraj|14853|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SSV_N.csv.zip|O1REJV01_SSV_N.csv|2|O1REJV01|SSV|Denní úhrn doby trvání slunečního svitu|hod|CZ080|Moravskoslezský kraj|9286|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_SSV_N.csv.zip|O1REJV01_SSV_N.csv|2|O1REJV01|SSV|Denní úhrn doby trvání slunečního svitu|hod|CZ071|Olomoucký kraj|9286|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_T_N.csv.zip|O1REJV01_T_N.csv|2|O1REJV01|T|Průměrná denní teplota vzduchu|°C|CZ080|Moravskoslezský kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_T_N.csv.zip|O1REJV01_T_N.csv|2|O1REJV01|T|Průměrná denní teplota vzduchu|°C|CZ071|Olomoucký kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_TMA_N.csv.zip|O1REJV01_TMA_N.csv|2|O1REJV01|TMA|Maximální denní teplota vzduchu|°C|CZ080|Moravskoslezský kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_TMA_N.csv.zip|O1REJV01_TMA_N.csv|2|O1REJV01|TMA|Maximální denní teplota vzduchu|°C|CZ071|Olomoucký kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_TMI_N.csv.zip|O1REJV01_TMI_N.csv|2|O1REJV01|TMI|Minimální denní teplota vzduchu|°C|CZ080|Moravskoslezský kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1REJV01_TMI_N.csv.zip|O1REJV01_TMI_N.csv|2|O1REJV01|TMI|Minimální denní teplota vzduchu|°C|CZ071|Olomoucký kraj|5326|2021.1.25.1143|2021-03-10 00:13:00
+O1ZLHO01_SCE_N.csv.zip|O1ZLHO01_SCE_N.csv|2|O1ZLHO01|SCE|Celková výška sněhové pokrývky|cm|CZ080|Moravskoslezský kraj|16192|2021.1.25.1143|2021-03-10 00:23:00
+O1ZLHO01_SCE_N.csv.zip|O1ZLHO01_SCE_N.csv|2|O1ZLHO01|SCE|Celková výška sněhové pokrývky|cm|CZ071|Olomoucký kraj|16192|2021.1.25.1143|2021-03-10 00:23:00
+O1ZLHO01_SNO_N.csv.zip|O1ZLHO01_SNO_N.csv|2|O1ZLHO01|SNO|Výška nového sněhu|cm|CZ080|Moravskoslezský kraj|15734|2021.1.25.1143|2021-03-10 00:23:00
+O1ZLHO01_SNO_N.csv.zip|O1ZLHO01_SNO_N.csv|2|O1ZLHO01|SNO|Výška nového sněhu|cm|CZ071|Olomoucký kraj|15734|2021.1.25.1143|2021-03-10 00:23:00
+O1ZLHO01_SRA_N.csv.zip|O1ZLHO01_SRA_N.csv|2|O1ZLHO01|SRA|Denní úhrn srážek|mm|CZ080|Moravskoslezský kraj|18689|2021.1.25.1143|2021-03-10 00:23:00
+O1ZLHO01_SRA_N.csv.zip|O1ZLHO01_SRA_N.csv|2|O1ZLHO01|SRA|Denní úhrn srážek|mm|CZ071|Olomoucký kraj|18689|2021.1.25.1143|2021-03-10 00:23:00
+O7KRAL01_T_N.csv.zip|O7KRAL01_T_N.csv|2|O7KRAL01|T|Průměrná denní teplota vzduchu|°C|CZ080|Moravskoslezský kraj|1645|2021.1.25.1143|2021-03-10 00:54:00
+O7KRAL01_T_N.csv.zip|O7KRAL01_T_N.csv|2|O7KRAL01|T|Průměrná denní teplota vzduchu|°C|CZ053|Pardubický kraj|1645|2021.1.25.1143|2021-03-10 00:54:00
