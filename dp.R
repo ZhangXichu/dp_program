@@ -665,7 +665,7 @@ max_T <- max(mat_T, na.rm=TRUE)
 
 df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
 
-coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
 
 #' Function calculates a GAM model with splines, by default thin-plate
 #'
@@ -947,6 +947,21 @@ df_T_1 <- df_T_na[, grep('01-01', names(df_T_na))]
 # e.g. gstat
 data("DE_RB_2005")
 
+
+sp = cbind(x = c(0,0,1), y = c(0,1,1))
+row.names(sp) = paste("point", 1:nrow(sp), sep="")
+
+sp = SpatialPoints(sp)
+time = as.POSIXct("2010-08-05")+3600*(10:13)
+m = c(10,20,30) # means for each of the 3 point locations
+mydata = rnorm(length(sp)*length(time),mean=rep(m, 4))
+
+IDs = paste("ID",1:length(mydata))
+mydata = data.frame(values = signif(mydata,3), ID=IDs)
+
+mydata = data.frame(values = signif(mydata,3), ID=IDs)
+stfdf = STFDF(sp, time, mydata)
+
 # ----------------------
 
 
@@ -971,12 +986,40 @@ df_info <- df[, seq(1:5)]
 df_info_indices
 
 colnames(df_info) <- df_info_indices
-df_info
+nrow(df_info)
 
 df_info_sp <- SpatialPoints(df_info[3:5])
 df_info_sp
 
 df_sub <- cbind(df_info, df_sub)
+lst_times <- colnames(df_sub[, 6:ncol(df_sub)])
+times <- as.POSIXct(lst_times) # the times points
+length(times)
 
-# df_sub_long <- melt(setDT(df_sub), id.vars = df_info_indices, variable.name = "year")
+id_vars <- c("longitude", "latitude", "altitude")
+df_sub_long <- melt(setDT(df_sub), id.vars = df_info_indices, variable.name = "year") # convert to long form
+nrow(df_sub_long)
+
+
+values <- df_sub_long$value
+values_df <- data.frame(values)
+
+stfdf_T <- STFDF(df_info_sp, times, values_df)
+
+# reference: gstat.pdf
+# calculate the variogram
+sample_vgm <- variogramST(formula=values~1, data=stfdf_T)
+
+model_T <- vgmST("productSum",
+                 space=vgm(39, "Sph", 343, 0),
+                 time=vgm(36, "Exp", 3, 0),
+                 k=15)
+
+fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=1)
+
+# the data on which interpolation is conducted
+df_info_new <- coords.cz.re
+
+
+
 
