@@ -665,7 +665,7 @@ max_T <- max(mat_T, na.rm=TRUE)
 
 df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
 
-coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
 
 #' Function calculates a GAM model with splines, by default thin-plate
 #'
@@ -718,7 +718,7 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
   
   # model I
   # tensor product interactive term
-  sub_model = gam(value ~ s(longitude, latitude, bs=bs) + s(altitude, bs=bs)+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
+  sub_model = gam(value ~ s(longitude, latitude, altitude, bs=bs)+ s(year) + ti(longitude, latitude, altitude, year, d=c(3, 1)),
                     data=df_sub_long, family=gaussian(link="identity"), method="REML")
   
   # 
@@ -778,7 +778,7 @@ get_r_data <- function(df_pred){
 
 # color template
 myPalette <- colorRampPalette(rev(brewer.pal(n=9, "Spectral")))
-sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-2, 22))
+sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-5, 22))
 
 # Spring
 gam_T_spring <- gam_model(df_T, datetime_cz='3-20')
@@ -900,6 +900,8 @@ ggplot() +
 saveRDS(gam_year_T, file = "models/gam_year_T.rds")
 saveRDS(df_pred_year_T, file = "models/df_pred_year_T.rds")
 
+
+
 # seasonal again
 # for comparing with the one-day head version
 gam_T_day <- gam_model(df_T, datetime_cz='01-01')
@@ -940,3 +942,41 @@ df_T_1 <- df_T_na[, grep('01-01', names(df_T_na))]
 # Kriging
 #
 ##############################
+
+# ---------------------------
+# e.g. gstat
+data("DE_RB_2005")
+
+# ----------------------
+
+
+datetime_cz <- '3-20'
+df <- df_T_n
+
+# number of stations with observations
+nrow(df_T_n)
+
+seasonal <- TRUE
+
+# get the subset for a concrete season
+if (seasonal) {
+  df_sub<- df[, grep(datetime_cz, names(df))]
+} else { # take data of one year
+  df_sub<- df[, grep(year, names(df))]
+}
+
+# columns of locations about the stations
+df_info <- df[, seq(1:5)]
+
+df_info_indices
+
+colnames(df_info) <- df_info_indices
+df_info
+
+df_info_sp <- SpatialPoints(df_info[3:5])
+df_info_sp
+
+df_sub <- cbind(df_info, df_sub)
+
+# df_sub_long <- melt(setDT(df_sub), id.vars = df_info_indices, variable.name = "year")
+
