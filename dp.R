@@ -767,7 +767,7 @@ la_min <- min(coords.cz$y)
 #' Function makes a Raster object for ploting
 #'
 get_r_data <- function(df_pred){
-  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=300, nrow=250) # 300, 250
+  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=200, nrow=150) # 300, 250
   r_data <- rasterize(x=df_pred[, 1:2], # lon-lat data
                       y=r_obj, # raster object
                       field=df_pred$value, # vals to fill raster with
@@ -1010,20 +1010,20 @@ stfdf_T <- STFDF(df_info_sp, times, values_df)
 # calculate the variogram
 sample_vgm <- variogramST(formula=values~1, data=stfdf_T)
 
-# model_T <- vgmST("productSum",
-#                  space=vgm(39, "Sph", 343, 0),
-#                  time=vgm(36, "Exp", 3, 0),
-#                  k=15)
+model_T <- vgmST("productSum",
+                 space=vgm(39, "Sph", 343, 0),
+                 time=vgm(36, "Exp", 3, 0),
+                 k=15)
 
 
-model_T <- vgmST("sumMetric",
-                      space = vgm( 4.4, "Lin", 196.6, 3),
-                      time = vgm( 2.2, "Lin", 1.1, 2),
-                      joint = vgm(34.6, "Exp", 136.6, 12),
-                      stAni = 51.7)
+# model_T <- vgmST("sumMetric",
+#                       space = vgm( 4.4, "Lin", 196.6, 3),
+#                       time = vgm( 2.2, "Lin", 1.1, 2),
+#                       joint = vgm(34.6, "Exp", 136.6, 12),
+#                       stAni = 51.7)
 
 fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=0)
-attributes(fitted_vgm)
+attributes(fitted_vgm)``
 
 # the data on which interpolation is conducted
 df_info_new_sp <- SpatialPoints(coords.cz.re)
@@ -1052,3 +1052,5 @@ g_spring <- ggplot() +
   theme(plot.title=element_text(hjust = 0.5)) +
   xlab("longitude") + ylab("latitude") +
   labs(fill = "")
+
+plot(g_spring)
