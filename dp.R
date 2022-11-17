@@ -1038,15 +1038,68 @@ persp3d(dxyz, col = col, front = "lines", back = "lines", xlab="time", ylab="dis
 # seems to be better
 # how to determine the initial values?
 
+# ---------------------------------------------------------------------------
+
+# arr_kappa_test <- seq(0.1, 10, by=0.5)
+arr_kappa_test <- seq(0.005, 0.01, by=0.001)
+
+min_MSE <- Inf
+mse <- Inf
+
+arr_mse <- list()
+
+arr_kappa <- list()
+arr_kappa2 <- list()
+arr_kappa3 <- list()
+
+for (kappa in arr_kappa_test) {
+  for (kappa2 in arr_kappa_test) {
+    for (kappa3 in arr_kappa_test) {
+    
+      model_T <- vgmST("sumMetric",
+                            space = vgm(4.4, "Lin", 300, kappa),
+                            time = vgm(2.2, "Lin", 365.25, kappa2),
+                            joint = vgm(26, "Exp", 9000, kappa3),
+                            stAni = 51.7)
+      
+      fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=0)
+      # attributes(fitted_vgm)
+      # print(attr(x=fitted_vgm, which="MSE"))
+      
+      mse <- round(attr(x=fitted_vgm, which="MSE"), digits=6)
+      
+      min_MSE <- min(mse, min_MSE)
+    
+      
+      arr_mse <- append(arr_mse, list(mse))
+      
+      arr_kappa <- append(arr_kappa, list(kappa))
+      arr_kappa2 <- append(arr_kappa, list(kappa2))
+      arr_kappa3 <- append(arr_kappa, list(kappa3))
+    }
+  }
+}
+
+min_MSE
+
+index_min <- which(arr_mse==min_MSE)
+index_min
+
+arr_kappa[1]
+
+# ---------------------------------------------------------------------------
+
+
 model_T <- vgmST("sumMetric",
-                      space = vgm(4.4, "Lin", 300, 3),
-                      time = vgm(2.2, "Lin", 365.25, 2),
-                      joint = vgm(26, "Exp", 9000, 12),
-                      stAni = 51.7)
+                 space = vgm(4.4, "Lin", 300, 0.05),
+                 time = vgm(2.2, "Lin", 365.25, 0.05),
+                 joint = vgm(26, "Exp", 9000, 0.05),
+                 stAni = 51.7)
 
 fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=0)
-# attributes(fitted_vgm)
-attr(x=fitted_vgm, which="MSE")
+attributes(fitted_vgm)
+
+
 
 coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
 
