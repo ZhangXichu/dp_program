@@ -3,7 +3,7 @@ ip = as.data.frame(installed.packages()[,c(1,3:4)])
 ip = ip[is.na(ip$Priority),1:2,drop=FALSE]
 ip
 
-setwd('C:/workspace/R/dp')
+setwd('C:/workspace/R/dp/dp_program')
 
 
 library(sp) # for data meuse
@@ -660,24 +660,32 @@ df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'alt
 coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
 
 
+#' Function makes a Raster object for ploting
+#'
+get_r_data <- function(df_pred){
+  
+  long_max <- max(coords.cz$x)
+  long_min <- min(coords.cz$x)
+  la_max <- max(coords.cz$y)
+  la_min <- min(coords.cz$y)
+  
+  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=165, nrow=117) # 300, 250
+  r_data <- rasterize(x=df_pred[, 1:2], # lon-lat data
+                      y=r_obj, # raster object
+                      field=df_pred$value, # vals to fill raster with
+                      fun=mean) # aggregate function
+  return(r_data)
+}
+
+stations_T <- na.omit(df_T)[, 1:5]
+colnames(stations_T) <- df_info_indices 
+
 #######################
 # 
 # implementation 
 # Spline
 #
 #######################
-
-# lst_T <- unlist(df_T[, c(6: (num_cols_T-5))])
-# # all the values from the average temperature table without Na
-# lst_T <- lst_T[!is.na(lst_T)]
-# 
-# plot(density(lst_T))
-# quantile(lst_T, probs=0.25)
-# quantile(lst_T, probs=0.75)
-
-# reindex
-# (coords.cz.re) <- NULL
-
 
 
 #' Function calculates a GAM model with splines, by default thin-plate
@@ -744,8 +752,7 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
   return(sub_model)
 }
 
-stations_T <- na.omit(df_T)[, 1:5]
-colnames(stations_T) <- df_info_indices 
+
 
 write.csv(stations_T, "stations_T.csv", row.names = FALSE)
 
@@ -769,24 +776,6 @@ gam_prediction  <- function(datetime_cz, gam_model) {
   df_pred_T_sub$value <- res_pred_T_sub
   
   return(df_pred_T_sub)
-}
-
-
-#' Function makes a Raster object for ploting
-#'
-get_r_data <- function(df_pred){
-  
-  long_max <- max(coords.cz$x)
-  long_min <- min(coords.cz$x)
-  la_max <- max(coords.cz$y)
-  la_min <- min(coords.cz$y)
-  
-  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=165, nrow=117) # 300, 250
-  r_data <- rasterize(x=df_pred[, 1:2], # lon-lat data
-                      y=r_obj, # raster object
-                      field=df_pred$value, # vals to fill raster with
-                      fun=mean) # aggregate function
-  return(r_data)
 }
 
 
@@ -979,6 +968,7 @@ stfdf = STFDF(sp, time, mydata)
 # ----------------------
 
 
+
 datetime_cz <- '3-20'
 df <- df_T_n
 
@@ -1047,14 +1037,16 @@ persp3d(dxyz, col = col, front = "lines", back = "lines", xlab="time", ylab="dis
 
 # seems to be better
 # how to determine the initial values?
+
 model_T <- vgmST("sumMetric",
-                      space = vgm(25, "Lin", 196.6, 3),
-                      time = vgm(25, "Lin", 1.1, 2),
-                      joint = vgm(25, "Exp", 136.6, 12),
+                      space = vgm(4.4, "Lin", 300, 3),
+                      time = vgm(2.2, "Lin", 365.25, 2),
+                      joint = vgm(26, "Exp", 9000, 12),
                       stAni = 51.7)
 
 fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=0)
-attributes(fitted_vgm)
+# attributes(fitted_vgm)
+attr(x=fitted_vgm, which="MSE")
 
 coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
 
