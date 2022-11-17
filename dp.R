@@ -680,6 +680,10 @@ get_r_data <- function(df_pred){
 stations_T <- na.omit(df_T)[, 1:5]
 colnames(stations_T) <- df_info_indices 
 
+# color template
+myPalette <- colorRampPalette(rev(brewer.pal(n=9, "Spectral")))
+sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-5, 22))
+
 #######################
 # 
 # implementation 
@@ -779,9 +783,7 @@ gam_prediction  <- function(datetime_cz, gam_model) {
 }
 
 
-# color template
-myPalette <- colorRampPalette(rev(brewer.pal(n=9, "Spectral")))
-sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-5, 22))
+
 
 # Spring
 gam_T_spring <- gam_model(df_T, datetime_cz='3-20')
