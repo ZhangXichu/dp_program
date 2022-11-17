@@ -41,6 +41,9 @@ library(data.table)
 library(mgcv) # for GAM
 library(RColorBrewer)
 library(gridExtra) # for arranging plots made by ggplot
+library(plotly)
+library(deldir)
+
 
 ##########################################
 # Spatial variogram
@@ -328,7 +331,7 @@ fit.teo <- FitComposite(sim.p$data, coordx=sim.p$coords, corrmodel=corrmodel,
 
 print(fit)
 
-xx<-seq(0, 10, 0.1)
+xx<-seq(0, 100, 0.1)
 loc_to_pred <- as.matrix(expand.grid(xx, xx))
 
 pr<-Kri(loc=loc_to_pred, coordx=sim.p$coords, corrmodel=corrmodel,
@@ -651,6 +654,19 @@ mat_T <- as.matrix(df_T[, c(6: (num_cols_T-5))])
 min_T <- min(mat_T, na.rm=TRUE)
 max_T <- max(mat_T, na.rm=TRUE)
 
+
+df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
+
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
+
+
+#######################
+# 
+# implementation 
+# Spline
+#
+#######################
+
 # lst_T <- unlist(df_T[, c(6: (num_cols_T-5))])
 # # all the values from the average temperature table without Na
 # lst_T <- lst_T[!is.na(lst_T)]
@@ -663,9 +679,6 @@ max_T <- max(mat_T, na.rm=TRUE)
 # (coords.cz.re) <- NULL
 
 
-df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
-
-coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
 
 #' Function calculates a GAM model with splines, by default thin-plate
 #'
@@ -759,15 +772,16 @@ gam_prediction  <- function(datetime_cz, gam_model) {
 }
 
 
-long_max <- max(coords.cz$x)
-long_min <- min(coords.cz$x)
-la_max <- max(coords.cz$y)
-la_min <- min(coords.cz$y)
-
 #' Function makes a Raster object for ploting
 #'
 get_r_data <- function(df_pred){
-  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=200, nrow=150) # 300, 250
+  
+  long_max <- max(coords.cz$x)
+  long_min <- min(coords.cz$x)
+  la_max <- max(coords.cz$y)
+  la_min <- min(coords.cz$y)
+  
+  r_obj <- raster(xmn=long_min, xmx=long_max, ymn=la_min, ymx=la_max, ncol=165, nrow=117) # 300, 250
   r_data <- rasterize(x=df_pred[, 1:2], # lon-lat data
                       y=r_obj, # raster object
                       field=df_pred$value, # vals to fill raster with
@@ -968,6 +982,9 @@ stfdf = STFDF(sp, time, mydata)
 datetime_cz <- '3-20'
 df <- df_T_n
 
+# total number of stations
+nrow(df_T)
+
 # number of stations with observations
 nrow(df_T_n)
 
@@ -1010,20 +1027,36 @@ stfdf_T <- STFDF(df_info_sp, times, values_df)
 # calculate the variogram
 sample_vgm <- variogramST(formula=values~1, data=stfdf_T)
 
-model_T <- vgmST("productSum",
-                 space=vgm(39, "Sph", 343, 0),
-                 time=vgm(36, "Exp", 3, 0),
-                 k=15)
+# plot the empirical ST variogram
+
+z <- as.numeric(sample_vgm$gamma)
+z[1] <- 0
+x <- as.numeric(sample_vgm$timelag)
+y <- as.numeric(sample_vgm$dist)
+y[1] <- 0
+
+col <- colorRampPalette(c("blue", "white"))(20)[1 + round(19*(z - min(z))/diff(range(z)))]
+dxyz <- deldir::deldir(x, y, z = z, suppressMsge = TRUE)
+persp3d(dxyz, col = col, front = "lines", back = "lines", xlab="time", ylab="dist", zlab="gamma")
+
+# model_T <- vgmST("productSum",
+#                  space=vgm(39, "Sph", 343, 0),
+#                  time=vgm(36, "Exp", 3, 0),
+#                  k=15)
 
 
-# model_T <- vgmST("sumMetric",
-#                       space = vgm( 4.4, "Lin", 196.6, 3),
-#                       time = vgm( 2.2, "Lin", 1.1, 2),
-#                       joint = vgm(34.6, "Exp", 136.6, 12),
-#                       stAni = 51.7)
+# seems to be better
+# how to determine the initial values?
+model_T <- vgmST("sumMetric",
+                      space = vgm(25, "Lin", 196.6, 3),
+                      time = vgm(25, "Lin", 1.1, 2),
+                      joint = vgm(25, "Exp", 136.6, 12),
+                      stAni = 51.7)
 
 fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=0)
-attributes(fitted_vgm)``
+attributes(fitted_vgm)
+
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
 
 # the data on which interpolation is conducted
 df_info_new_sp <- SpatialPoints(coords.cz.re)
@@ -1032,6 +1065,8 @@ df_info_new_sp
 times_new <- rep(as.POSIXct("2021-03-20"), times=nrow(coords.cz.re))
 
 stfdf_T_new = STI(df_info_new_sp, times_new, times_new)
+
+gc()
 
 krige_res <- krigeST(values~1, data=stfdf_T, computeVar=TRUE, newdata=stfdf_T_new, modelList=fitted_vgm)
 kri_preds <- krige_res@data[["var1.pred"]]
@@ -1047,7 +1082,7 @@ r_data_df  <- data.frame(r_data_pts)
 g_spring <- ggplot() +
   geom_raster(data=r_data_df, aes(x=x, y=y, fill=layer)) +
   sc +
-  geom_point(aes(coords.cz.re$longitude, coords.cz.re$latitude), , size=1.8, color="#575757", pch=19) +
+  geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
   ggtitle("20-3-2021") +
   theme(plot.title=element_text(hjust = 0.5)) +
   xlab("longitude") + ylab("latitude") +
