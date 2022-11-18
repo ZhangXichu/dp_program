@@ -43,6 +43,7 @@ library(RColorBrewer)
 library(gridExtra) # for arranging plots made by ggplot
 library(plotly)
 library(deldir)
+library(dplyr)
 
 
 ##########################################
@@ -968,10 +969,6 @@ mydata = data.frame(values = signif(mydata,3), ID=IDs)
 stfdf = STFDF(sp, time, mydata)
 
 # ----------------------
-
-
-
-datetime_cz <- '3-20'
 df <- df_T_n
 
 # total number of stations
@@ -980,14 +977,27 @@ nrow(df_T)
 # number of stations with observations
 nrow(df_T_n)
 
-seasonal <- TRUE
+###############################################################
+# seasonal prediction
 
-# get the subset for a concrete season
-if (seasonal) {
-  df_sub<- df[, grep(datetime_cz, names(df))]
-} else { # take data of one year
-  df_sub<- df[, grep(year, names(df))]
-}
+datetime_cz <- '6-20'
+
+df_sub<- df[, grep(datetime_cz, names(df))]
+###############################################################
+
+#################################################################
+# one-day-ahead prediction
+year <- '2020'
+
+df_sub<- df[, grep(year, names(df))]
+
+# pick every 5th row, starting from the first
+df_sub <- df_sub %>% 
+  select(seq(1, last_col(), by = 6))
+
+
+#################################################################
+
 
 # columns of locations about the stations
 df_info <- df[, seq(1:5)]
@@ -1042,8 +1052,8 @@ persp3d(dxyz, col = col, front = "lines", back = "lines", xlab="time", ylab="dis
 
 # ---------------------------------------------------------------------------
 
-# arr_kappa_test <- seq(0.1, 10, by=0.5)
-arr_kappa_test <- seq(0.005, 0.01, by=0.001)
+arr_kappa_test <- seq(0.1, 10, by=0.5)
+# arr_kappa_test <- seq(0.005, 0.01, by=0.001)
 
 min_MSE <- Inf
 mse <- Inf
@@ -1093,12 +1103,17 @@ arr_kappa[1]
 
 
 model_T <- vgmST("sumMetric",
-                 space = vgm(4.4, "Lin", 300, 0.05),
-                 time = vgm(2.2, "Lin", 365.25, 0.05),
-                 joint = vgm(26, "Exp", 9000, 0.05),
+                 space = vgm(10, "Lin", 300, 0.05),
+                 time = vgm(10, "Lin", 365.25, 0.05),
+                 joint = vgm(100, "Exp", 9000, 0.05),
                  stAni = 51.7)
 
-fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=0)
+# prodSumModel <- vgmST("productSum",
+#                       space=vgm(39, "Sph", 343, 0),
+#                       time= vgm(36, "Exp", 3, 0),
+#                       k=15)
+# 
+fitted_vgm <- fit.StVariogram(object=sample_vgm, model=model_T, fit.method=0, fit.kappa=TRUE)
 attributes(fitted_vgm)
 
 
@@ -1109,13 +1124,14 @@ coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
 df_info_new_sp <- SpatialPoints(coords.cz.re)
 df_info_new_sp
 
-times_new <- rep(as.POSIXct("2021-03-20"), times=nrow(coords.cz.re))
+times_new <- rep(as.POSIXct("2021-01-01"), times=nrow(coords.cz.re))
 
 stfdf_T_new = STI(df_info_new_sp, times_new, times_new)
 
 gc()
 
 krige_res <- krigeST(values~1, data=stfdf_T, computeVar=TRUE, newdata=stfdf_T_new, modelList=fitted_vgm)
+
 kri_preds <- krige_res@data[["var1.pred"]]
 
 pred_df_T <- coords.cz.re
@@ -1126,13 +1142,13 @@ r_data_T <- get_r_data(pred_df_T)
 r_data_pts <- rasterToPoints(r_data_T, spatial = TRUE)
 r_data_df  <- data.frame(r_data_pts)
 
-g_spring <- ggplot() +
+g_summer <- ggplot() +
   geom_raster(data=r_data_df, aes(x=x, y=y, fill=layer)) +
   sc +
   geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
-  ggtitle("20-3-2021") +
+  ggtitle("20-6-2021") +
   theme(plot.title=element_text(hjust = 0.5)) +
   xlab("longitude") + ylab("latitude") +
   labs(fill = "")
 
-plot(g_spring)
+plot(g_summer)
