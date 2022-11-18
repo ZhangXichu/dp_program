@@ -683,7 +683,7 @@ colnames(stations_T) <- df_info_indices
 
 # color template
 myPalette <- colorRampPalette(rev(brewer.pal(n=9, "Spectral")))
-sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-5, 22))
+sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-3, 22))
 
 #######################
 # 
@@ -980,7 +980,7 @@ nrow(df_T_n)
 ###############################################################
 # seasonal prediction
 
-datetime_cz <- '6-20'
+datetime_cz <- '-01-01'
 
 df_sub<- df[, grep(datetime_cz, names(df))]
 ###############################################################
@@ -1103,9 +1103,9 @@ arr_kappa[1]
 
 
 model_T <- vgmST("sumMetric",
-                 space = vgm(10, "Lin", 300, 0.05),
-                 time = vgm(10, "Lin", 365.25, 0.05),
-                 joint = vgm(100, "Exp", 9000, 0.05),
+                 space = vgm(4.5, "Lin", 300, 0.05),
+                 time = vgm(2.5, "Lin", 365.25, 0.05),
+                 joint = vgm(25, "Exp", 9000, 0.05),
                  stAni = 51.7)
 
 # prodSumModel <- vgmST("productSum",
@@ -1142,13 +1142,80 @@ r_data_T <- get_r_data(pred_df_T)
 r_data_pts <- rasterToPoints(r_data_T, spatial = TRUE)
 r_data_df  <- data.frame(r_data_pts)
 
-g_summer <- ggplot() +
+g_one_day <- ggplot() +
   geom_raster(data=r_data_df, aes(x=x, y=y, fill=layer)) +
   sc +
   geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
-  ggtitle("20-6-2021") +
+  ggtitle("1-1-2021") +
   theme(plot.title=element_text(hjust = 0.5)) +
   xlab("longitude") + ylab("latitude") +
   labs(fill = "")
 
-plot(g_summer)
+plot(g_one_day)
+
+
+# plot variances
+# krige_res_var <- krige_res_spring_sumMetric_new@data[["var1.var"]]
+# krige_res_var <- krige_res_one_day_sumMetric@data[["var1.var"]]
+krige_res_var <- krige_res_one_day_sumMetric_season_Jan@data[["var1.var"]]
+
+# try square variance
+n <- length(krige_res_var)
+
+krige_res_var_sqr <- sqrt(krige_res_var)
+
+min(krige_res_var_sqr)
+max(krige_res_var_sqr)
+
+# myPalette2 <- colorRampPalette(rev(brewer.pal(n=9, "Purples")))
+myPalette2 <- colorRampPalette(brewer.pal(n=9, "BuPu"))
+sc2 <- scale_fill_gradientn(colours = myPalette2(50), limits=c(5, 5.7))
+
+pred_df_T_var <- coords.cz.re
+pred_df_T_var$value <- krige_res_var_sqr
+
+r_data_T <- get_r_data(pred_df_T_var)
+
+r_data_pts <- rasterToPoints(r_data_T, spatial = TRUE)
+r_data_df  <- data.frame(r_data_pts)
+
+
+g_var <- ggplot() +
+  geom_raster(data=r_data_df, aes(x=x, y=y, fill=layer)) +
+  sc2 +
+  geom_point(aes(stations_T$longitude, stations_T$latitude), size=1.4, color="#474747", pch=16) +
+  ggtitle("standard error") +
+  theme(plot.title=element_text(hjust = 0.5)) +
+  xlab("longitude") + ylab("latitude") +
+  labs(fill = "")
+
+# plot(g_spring_var)
+
+grid.arrange(g_one_day , g_var, nrow=1, ncol=2)
+
+# compare two densities
+
+krige_res1 <- krige_res_one_day_sumMetric@data[["var1.pred"]] 
+krige_res2 <- krige_res_one_day_sumMetric_season_Jan@data[["var1.pred"]]
+
+
+kri_res1_df <- data.frame(krige_res1)
+colnames(kri_res1_df) <- "temperature"
+
+kri_res2_df <- data.frame(krige_res2)
+colnames(kri_res2_df) <- "temperature"
+
+
+kri_df <- kri_res1_df
+kri_df['2'] <- kri_res2_df
+
+colnames(kri_df) <- c("one-day-ahead", "seasonal")
+
+kri_df_melt <- melt(setDT(kri_df), id.var = c()) 
+
+colnames(kri_df_melt) <- c("type", "temperature")
+
+ggplot(kri_df_melt, aes(temperature, colour=type, fill=type)) +
+  geom_density(alpha=0.1)
+
+
