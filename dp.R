@@ -643,7 +643,11 @@ coords.cz$z <- sp.df@data[["raytraced"]] # add ealtitude
 
 # read the data
 # average temperature
-df_T <- readRDS("DATA/CHMU_Output/df_T_Hodnota_V1.32.rds")
+# df_T <- readRDS("DATA/CHMU_Output/df_T_Hodnota_V1.32.rds")
+
+# percitipation
+df_T <- readRDS("DATA/CHMU_Output/df_SRA_Hodnota_V1.32.rds")
+
 nrow(df_T)
 df_T_n <- na.omit(df_T)
 
@@ -658,7 +662,7 @@ max_T <- max(mat_T, na.rm=TRUE)
 
 df_info_indices <- c('station_id', 'station_name', 'longitude', 'latitude', 'altitude')
 
-coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 1), ]
+coords.cz.re <- coords.cz[seq(1, nrow(coords.cz), 100), ]
 
 
 #' Function makes a Raster object for ploting
@@ -682,6 +686,10 @@ stations_T <- na.omit(df_T)[, 1:5]
 colnames(stations_T) <- df_info_indices 
 
 # color template
+# myPalette <- colorRampPalette(rev(brewer.pal(n=9, "Spectral")))
+# sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-3, 22))
+
+# for rain drop 
 myPalette <- colorRampPalette(rev(brewer.pal(n=9, "Spectral")))
 sc <- scale_fill_gradientn(colours = myPalette(50), limits=c(-3, 22))
 
@@ -759,7 +767,7 @@ gam_model <- function(df, bs='tp', datetime_cz='6-20', seasonal=TRUE, year=2020)
 
 
 
-write.csv(stations_T, "stations_T.csv", row.names = FALSE)
+# write.csv(stations_T, "stations_T.csv", row.names = FALSE)
 
 #' Funtion makes prediction using input GAM model
 #'
@@ -837,6 +845,17 @@ saveRDS(gam_T_spring, file = "models/gam_T_spring.rds")
 saveRDS(gam_T_summer, file = "models/gam_T_summer.rds")
 saveRDS(gam_T_autumn, file = "models/gam_T_sutumn.rds")
 saveRDS(gam_T_winter, file = "models/gam_T_winter.rds")
+
+
+g_spring <- ggplot() +
+  geom_raster(data=r_data_spring_df, aes(x=x, y=y, fill=layer)) +
+  sc +
+  geom_point(aes(stations_T$longitude, stations_T$latitude), , size=1.8, color="#575757", pch=19) +
+  ggtitle("3-20") +
+  theme(plot.title=element_text(hjust = 0.5)) +
+  xlab("longitude") + ylab("latitude") +
+  labs(fill = "")
+
 
 plot_T <- function() {
   g1 <- ggplot() +
