@@ -1,3 +1,5 @@
+# this file contains the code for the theoretical chapters in the thesis
+
 # check all the installed packages
 ip = as.data.frame(installed.packages()[,c(1,3:4)])
 ip = ip[is.na(ip$Priority),1:2,drop=FALSE]
